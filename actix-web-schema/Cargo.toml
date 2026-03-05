@@ -11,6 +11,4 @@ authors = ["killf <killf@foxmail.com>"]
 readme = "../README.md"
 
 [dependencies]
-actix-web = { workspace = true }
-serde = { workspace = true }
-actix-web-schema-macro = { path = "../actix-web-schema-macro" }
+actix-web-schema-macro = { path = "../actix-web-schema-macro", version = "0.2.0" }
