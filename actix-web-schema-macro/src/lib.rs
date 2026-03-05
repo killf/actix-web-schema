@@ -149,10 +149,23 @@ pub fn response(_attr: TokenStream, input: TokenStream) -> TokenStream {
         .collect();
 
     // Reconstruct the original struct with #[derive(Serialize)] and doc comments
+    // Handle different field types (named, unnamed, unit)
+    let struct_fields = match fields {
+        syn::Fields::Named(named) => {
+            let fields = named.named.iter();
+            quote! { { #(#fields),* } }
+        }
+        syn::Fields::Unnamed(unnamed) => {
+            let fields = unnamed.unnamed.iter();
+            quote! { ( #(#fields),* ); }
+        }
+        syn::Fields::Unit => quote! { ; },
+    };
+
     let original_struct = quote! {
         #[derive(::serde::Serialize)]
         #(#doc_attrs)*
-        #vis struct #struct_name #generics #fields
+        #vis struct #struct_name #generics #struct_fields
     };
 
     // Generate the Responder implementation
