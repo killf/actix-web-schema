@@ -10,4 +10,6 @@ categories = ["web-programming", "api-bindings"]
 authors = ["Your Name <your.email@example.com>"]
 
 [dependencies]
-actix-web-schema-macro = { path = "../actix-web-schema-macro" }
+actix-web = { workspace = true }
+serde = { workspace = true }
+actix-web-schema-macro = { path = "../actix-web-schema-macro", version = "0.1" }
