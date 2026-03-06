@@ -134,12 +134,16 @@ fn parse_route_attr(attr: &Attribute) -> Option<(String, String)> {
 }
 
 #[proc_macro_attribute]
-pub fn response(_attr: TokenStream, input: TokenStream) -> TokenStream {
+pub fn response(attr: TokenStream, input: TokenStream) -> TokenStream {
     let input_struct = parse_macro_input!(input as ItemStruct);
     let struct_name = &input_struct.ident;
     let vis = &input_struct.vis;
     let generics = &input_struct.generics;
     let fields = &input_struct.fields;
+
+    // Parse the attribute to check for "raw" flag
+    let attr_str = attr.to_string();
+    let is_raw = attr_str.trim() == "raw";
 
     // Extract doc attributes from the struct
     let doc_attrs: Vec<_> = input_struct
@@ -169,13 +173,25 @@ pub fn response(_attr: TokenStream, input: TokenStream) -> TokenStream {
         #vis struct #struct_name #generics #struct_fields
     };
 
-    // Generate the Responder implementation
-    let responder_impl = quote! {
-        impl ::actix_web::Responder for #struct_name #generics {
-            type Body = ::actix_web::body::BoxBody;
+    // Generate the Responder implementation based on whether raw is specified
+    let responder_impl = if is_raw {
+        quote! {
+            impl ::actix_web::Responder for #struct_name #generics {
+                type Body = ::actix_web::body::BoxBody;
 
-            fn respond_to(self, _req: &::actix_web::HttpRequest) -> ::actix_web::HttpResponse<Self::Body> {
-                ::actix_web::HttpResponse::Ok().json(::serde_json::json!({"code": 0, "data": self}))
+                fn respond_to(self, _req: &::actix_web::HttpRequest) -> ::actix_web::HttpResponse<Self::Body> {
+                    ::actix_web::HttpResponse::Ok().json(self)
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl ::actix_web::Responder for #struct_name #generics {
+                type Body = ::actix_web::body::BoxBody;
+
+                fn respond_to(self, _req: &::actix_web::HttpRequest) -> ::actix_web::HttpResponse<Self::Body> {
+                    ::actix_web::HttpResponse::Ok().json(::serde_json::json!({"code": 0, "data": self}))
+                }
             }
         }
     };
