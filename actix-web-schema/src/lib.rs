@@ -36,11 +36,11 @@ mod tests {
 
     impl Hello for HelloService {
         async fn hello() -> Result<HelloResponse, Box<dyn std::error::Error>> {
-            todo!()
+            Err("Just for test".into())
         }
 
         async fn login(request: actix_web::web::Json<LoingRequest>) -> Result<LoingResponse, Box<dyn std::error::Error>> {
-            todo!()
+            Err("Just for test".into())
         }
     }
 }
