@@ -163,6 +163,7 @@ pub fn response(_attr: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let original_struct = quote! {
+        #[allow(unused)]
         #[derive(::serde::Serialize)]
         #(#doc_attrs)*
         #vis struct #struct_name #generics #struct_fields
@@ -217,6 +218,7 @@ pub fn request(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
     // Reconstruct the original struct with #[derive(Deserialize)] and doc comments
     let original_struct = quote! {
+        #[allow(unused)]
         #[derive(::serde::Deserialize)]
         #(#doc_attrs)*
         #vis struct #struct_name #generics #struct_fields
