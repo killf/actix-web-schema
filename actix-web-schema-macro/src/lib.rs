@@ -186,3 +186,41 @@ pub fn response(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
     TokenStream::from(expanded)
 }
+
+#[proc_macro_attribute]
+pub fn request(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    let input_struct = parse_macro_input!(input as ItemStruct);
+    let struct_name = &input_struct.ident;
+    let vis = &input_struct.vis;
+    let generics = &input_struct.generics;
+    let fields = &input_struct.fields;
+
+    // Extract doc attributes from the struct
+    let doc_attrs: Vec<_> = input_struct
+        .attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident("doc"))
+        .collect();
+
+    // Handle different field types (named, unnamed, unit)
+    let struct_fields = match fields {
+        syn::Fields::Named(named) => {
+            let fields = named.named.iter();
+            quote! { { #(#fields),* } }
+        }
+        syn::Fields::Unnamed(unnamed) => {
+            let fields = unnamed.unnamed.iter();
+            quote! { ( #(#fields),* ); }
+        }
+        syn::Fields::Unit => quote! { ; },
+    };
+
+    // Reconstruct the original struct with #[derive(Deserialize)] and doc comments
+    let original_struct = quote! {
+        #[derive(::serde::Deserialize)]
+        #(#doc_attrs)*
+        #vis struct #struct_name #generics #struct_fields
+    };
+
+    TokenStream::from(original_struct)
+}
