@@ -10,6 +10,7 @@
 
 - **`#[service]`** - 通过 trait 定义 HTTP 服务，自动生成路由配置
 - **`#[response]`** - 通过结构体定义响应格式，自动实现 `Responder`
+- **`#[request]`** - 通过结构体定义请求格式，自动实现 `Deserialize`
 - 统一的响应格式包装（`{code: 0, data: ...}`）
 - 类型安全的路由定义
 - 零运行时开销
@@ -31,22 +32,36 @@ actix-web-schema = "0.1"
 
 ```rust
 use actix_web_schema::service;
-use actix_web::web::Json;
+use actix_web::web;
 
 /// 用户服务
 #[service]
 pub trait UserService {
     /// 获取用户信息
     #[get("/users/{id}")]
-    async fn get_user(id: web::Path<u32>) -> Json<User>;
+    async fn get_user(id: web::Path<u32>) -> User;
 
     /// 创建用户
     #[post("/users")]
-    async fn create_user(user: Json<CreateUserRequest>) -> Json<User>;
+    async fn create_user(user: web::Json<CreateUserRequest>) -> User;
 
     /// 删除用户
     #[delete("/users/{id}")]
-    async fn delete_user(id: web::Path<u32>) -> Json<()>;
+    async fn delete_user(id: web::Path<u32>) -> ();
+}
+```
+
+### 定义请求
+
+使用 `#[request]` 宏定义请求结构：
+
+```rust
+use actix_web_schema::request;
+
+#[request]
+pub struct CreateUserRequest {
+    name: String,
+    email: String,
 }
 ```
 
@@ -73,8 +88,7 @@ pub struct User {
 
 ```rust
 use actix_web::{App, HttpServer, web};
-use actix_web_schema::{service, response};
-use serde::Serialize;
+use actix_web_schema::{service, response, request};
 
 // 定义响应结构
 #[response]
@@ -87,9 +101,37 @@ pub struct GreetingResponse {
 pub trait HelloService {
     /// 问候接口
     #[get("/hello/{name}")]
+    async fn hello(name: web::Path<String>) -> GreetingResponse;
+
+    /// 登录接口
+    #[post("/login")]
+    async fn login(req: web::Json<LoginRequest>) -> LoginResponse;
+}
+
+// 定义请求结构
+#[request]
+pub struct LoginRequest {
+    username: String,
+    password: String,
+}
+
+#[response]
+pub struct LoginResponse {
+    token: String,
+}
+
+// 实现服务
+impl HelloService for HelloService {
     async fn hello(name: web::Path<String>) -> GreetingResponse {
         GreetingResponse {
-            message: format!("Hello, {}!", name),
+            message: format!("Hello, {}!", name.into_inner()),
+        }
+    }
+
+    async fn login(req: web::Json<LoginRequest>) -> LoginResponse {
+        // 验证逻辑...
+        LoginResponse {
+            token: format!("token_for_{}", req.username),
         }
     }
 }
@@ -104,6 +146,16 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
+```
+
+访问 `GET /hello/world` 返回：
+```json
+{"code": 0, "data": {"message": "Hello, world!"}}
+```
+
+访问 `POST /login` 返回：
+```json
+{"code": 0, "data": {"token": "token_for_user"}}
 ```
 
 ## 工作原理
@@ -123,6 +175,13 @@ async fn main() -> std::io::Result<()> {
 1. 自动添加 `#[derive(Serialize)]`
 2. 实现 `Responder` trait
 3. 以统一格式 `{"code": 0, "data": ...}` 返回 JSON 响应
+
+### `#[request]` 宏
+
+`#[request]` 宏处理结构体定义：
+
+1. 自动添加 `#[derive(Deserialize)]`
+2. 用于定义请求体结构，可直接作为 `web::Json<T>` 的类型参数
 
 ## 支持的 HTTP 方法
 
