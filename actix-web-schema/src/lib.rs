@@ -39,7 +39,7 @@ mod tests {
             Err("Just for test".into())
         }
 
-        async fn login(request: actix_web::web::Json<LoingRequest>) -> Result<LoingResponse, Box<dyn std::error::Error>> {
+        async fn login(_request: actix_web::web::Json<LoingRequest>) -> Result<LoingResponse, Box<dyn std::error::Error>> {
             Err("Just for test".into())
         }
     }
